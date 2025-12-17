@@ -1,0 +1,24 @@
+# Source files (we ship the compiled dist/)
+src/
+tsconfig.json
+tsdown.config.ts
+.graphqlrc.ts
+
+# Development environment
+.vscode/
+.nvmrc
+biome.json
+
+# Build artifacts we don't want in npm
+dist/logs/
+
+# Version control
+.git
+.gitignore
+
+# Dependencies (npm handles this automatically, but being explicit)
+node_modules/
+
+# Documentation for development
+.github/
+
