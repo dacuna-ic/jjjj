@@ -5,8 +5,9 @@ A Stacked PR tool sitting atop [Jujutsu VCS](https://github.com/jj-vcs/jj).
 `jjjj` introduces a bunch of commands related to stacked PRs workflow, which will pass-through any commands directly to `jj` for simplicity.
 
 ### Requirements
-- Node.js 18 or higher
+- [jj](https://www.jj-vcs.dev/latest/install-and-setup/)!
 - The [`gh` utility from GitHub](https://cli.github.com)
+- Node.js 18 or higher
 
 ### Installation
 
@@ -44,6 +45,8 @@ $ j ready
 ```
 
 Main commands:
+
+**NOTE**: anything outside of this list will simply passthrough to JJ, so you can use j for anything jj too!
 
 #### `sync`
 Creates bookmarks (if needed) and pushes to Github. It will use `{yourUsername}/{revId}/your-revision-description`

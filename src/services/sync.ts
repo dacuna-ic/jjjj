@@ -62,7 +62,7 @@ const createOrUpdatePR = async (
   abandonMerged: boolean,
 ) => {
   const existingPr = await getPRByBranchName(rev.bookmark!);
-  const { owner, repo } = await getGhConstants();
+  const { owner, repo, defaultBranch } = await getGhConstants();
 
   if (existingPr?.state === "closed") {
     await octokit.rest.git
@@ -88,7 +88,7 @@ const createOrUpdatePR = async (
     title: rev.description,
     body: "",
     head: rev.bookmark!,
-    base: prev?.bookmark || "master",
+    base: prev?.bookmark || defaultBranch,
   };
 
   if (prExists) {
