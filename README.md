@@ -44,7 +44,12 @@ $ j sync
 $ j ready
 ```
 
-Main commands:
+#### Demo video
+
+https://github.com/user-attachments/assets/8cbb6736-c486-4181-9deb-27069db5c7e3
+
+
+### Main commands
 
 **NOTE**: anything outside of this list will simply passthrough to JJ, so you can use j for anything jj too!
 
