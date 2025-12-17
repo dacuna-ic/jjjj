@@ -54,7 +54,7 @@ https://github.com/user-attachments/assets/8cbb6736-c486-4181-9deb-27069db5c7e3
 **NOTE**: anything outside of this list will simply passthrough to JJ, so you can use j for anything jj too!
 
 #### `sync`
-Creates bookmarks (if needed) and pushes to Github. It will use `{yourUsername}/{revId}/your-revision-description`
+Creates bookmarks (if needed) and pushes to Github. It will use `{yourUsername}/{revId}/your-revision-descriptions-first-line`. It will additionally strip any [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) prefixes (e.g.: 'feat: some fancy feature' -> 'some-fancy-feature')
 
 #### `restack`
 Does a `jj git fetch`, followed by rebases for the whole current stack. You can pass `--all` to restack ALL the stacks to latest.
