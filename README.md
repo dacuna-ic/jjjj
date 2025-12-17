@@ -5,13 +5,29 @@ A Stacked PR tool sitting atop [Jujutsu VCS](https://github.com/jj-vcs/jj).
 `jjjj` introduces a bunch of commands related to stacked PRs workflow, which will pass-through any commands directly to `jj` for simplicity.
 
 ### Requirements
-This requires Node.js as well as the [`gh` utility from GitHub](https://cli.github.com).
+- Node.js 18 or higher
+- The [`gh` utility from GitHub](https://cli.github.com)
 
 ### Installation
-- Clone this repo in any directory
-- Add `~/.local/bin` to your PATH
-- Execute `npm install` in the cloned directory
-- `j` is the binary that gets instsalled in `~/.local/bin`. If you can execute this already you're good to go, otherwise your shell might need to restart.
+
+```bash
+npm install -g jjjj-cli
+```
+
+This installs the `j` command globally. You can verify with `j --help`.
+
+#### Development Installation
+
+If you want to contribute or run from source:
+
+```bash
+git clone https://github.com/dacuha-ic/jjjj.git
+cd jjjj
+npm install
+npm run dev:install
+```
+
+This builds locally and installs a shim to `~/.local/bin/j`.
 
 ### How does a normal workflow look like?
 

@@ -3,11 +3,13 @@ src/
 tsconfig.json
 tsdown.config.ts
 .graphqlrc.ts
+install.js
 
 # Development environment
 .vscode/
 .nvmrc
 biome.json
+bin/dev.js
 
 # Build artifacts we don't want in npm
 dist/logs/
