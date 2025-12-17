@@ -14,14 +14,16 @@ export type GithubConstants = {
   repo: string;
   currentUser: string;
   prefix: string;
+  defaultBranch: string;
 };
 
 export const getGhConstants = async (): Promise<GithubConstants> => {
   return withCache("gh-data", async () => {
     const [repoData, currentUser] = await Promise.all([
-      $`gh repo view --json owner,name`.json() as Promise<{
+      $`gh repo view --json owner,name,defaultBranchRef`.json() as Promise<{
         owner: { login: string };
         name: string;
+        defaultBranchRef: { name: string };
       }>,
       octokit.rest.users.getAuthenticated().then((r) => r.data.login),
     ]);
@@ -31,6 +33,7 @@ export const getGhConstants = async (): Promise<GithubConstants> => {
       repo: repoData.name,
       currentUser,
       prefix: `${currentUser}/`,
+      defaultBranch: repoData.defaultBranchRef.name,
     };
   });
 };
