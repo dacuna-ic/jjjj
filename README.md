@@ -74,7 +74,7 @@ Describes the current revision, a shorthand for `jj describe`, but instead of op
 Lets AI describe the current revision, with a picker of the changed files to send specific diffs over to OpenAI's API.
 
 #### `clean`
-Removes any dangling empty, mutable revisions. Useful for when
+Removes any dangling empty, mutable revisions.
 
 #### `pull`
 Pulls an existing branch from origin, useful for checking out code from other people.
