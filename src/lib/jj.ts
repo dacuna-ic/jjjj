@@ -63,7 +63,7 @@ export const log = ({
 }) => {
   const [template, parse] = buildTemplate(fields);
 
-  return $`jj log --quiet -r ${revisions} ${reversed ? "--reversed" : ""} --template=${template} --no-graph`
+  return $`jj log --quiet -r ${revisions} ${reversed ? ["--reversed"] : []} --template=${template} --no-graph`
     .text()
     .then((text) => {
       return parse(text);
