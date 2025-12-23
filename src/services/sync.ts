@@ -151,7 +151,8 @@ export const syncRevisions = async (
     emitStackEvent("update", { rev, state: PRState.SYNCING });
 
     await $`jj bookmark set -r ${rev.changeId} ${rev.bookmark} --allow-backwards`;
-    await $`jj git push -b ${rev.bookmark} --allow-new`;
+    await $`jj bookmark track ${rev.bookmark}@origin`;
+    await $`jj git push -b ${rev.bookmark}`;
   });
 
   const results = await pMapSeries(revs, async (rev, i) => {
