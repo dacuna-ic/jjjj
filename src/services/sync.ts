@@ -68,8 +68,6 @@ const upsertStackComment = async (prNumber: number, commentContents: string[]) =
 };
 
 const createOrUpdatePR = async (rev: Revision, prev: Revision, abandonMerged: boolean) => {
-  emitStackEvent("update", { rev, state: PRState.PENDING });
-
   const existingPr = await getPRByBranchName(rev.bookmark!);
   const { owner, repo, defaultBranch } = await getGhConstants();
 
@@ -99,6 +97,8 @@ const createOrUpdatePR = async (rev: Revision, prev: Revision, abandonMerged: bo
     });
     return existingPr;
   }
+
+  emitStackEvent("update", { rev, state: PRState.PENDING });
 
   const prParams = {
     owner,
