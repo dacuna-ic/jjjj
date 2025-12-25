@@ -49,6 +49,8 @@ const upsertStackComment = async (
     return;
   }
 
+  // foo
+
   const newBody = [
     `<div id="${commentRef}">\n`,
     "#### Note: this is a stack of PRs, check the following for more details:",
@@ -170,8 +172,10 @@ export const syncRevisions = async (
       return rev;
     }
 
+    console.log("isNewBookmark", isNewBookmark, rev.remoteOutdated);
     if (!isNewBookmark && !rev.remoteOutdated) {
       emitStackEvent("update", { rev, state: PRState.SKIPPED });
+      console.log('we here then?')
       return rev;
     }
 
