@@ -3,7 +3,23 @@ import { Octokit } from "octokit";
 import { $ } from "zx";
 import { withCache } from "./cache.js";
 import { config } from "./config.js";
+import { gh } from "./github-gql.js";
+import { graphql } from "./gql/gql.js";
 import type { Revision } from "./types.js";
+
+const setPrReadyMutation = graphql(/* GraphQL */ `
+  mutation setPrReady($prId: ID!) {
+    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {
+      pullRequest {
+        number
+      }
+    }
+  }
+`);
+
+export const markPrReady = async (prNodeId: string) => {
+  return gh.mutation(setPrReadyMutation, { prId: prNodeId });
+};
 
 export const octokit = new Octokit({
   auth: config.githubToken,
