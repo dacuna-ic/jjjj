@@ -48,7 +48,7 @@
 		"ink-spinner": "^5.0.0",
 		"lodash": "^4.17.21",
 		"octokit": "^4.0.2",
-		"openai": "^5.16.0",
+		"openai": "^6.15.0",
 		"p-map": "^7.0.3",
 		"p-map-series": "^3.0.0",
 		"p-props": "^6.0.0",

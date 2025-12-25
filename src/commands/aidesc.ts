@@ -21,8 +21,9 @@ export default class Aidesc extends Command {
       })),
     });
 
-    const diff =
-      await $`jj diff --git ${selectedChanges.map((change) => change.path).join(" ")}`.text();
+    const diff = await $`jj diff --git ${selectedChanges.map(
+      (change) => change.path
+    )}`.text();
 
     if (!diff) {
       this.error("No changes found, exiting...");
