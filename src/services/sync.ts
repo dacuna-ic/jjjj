@@ -184,6 +184,7 @@ export const syncRevisions = async (
 
   const results = await pMapSeries(revs, async (rev, i) => {
     if (!rev.bookmark) return { rev };
+    if (!rev.remoteOutdated) return { rev };
     const prevRev = revs[i - 1];
 
     emitStackEvent("update", { rev, state: PRState.PENDING });
