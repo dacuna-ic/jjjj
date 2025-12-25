@@ -19,7 +19,7 @@ let supportsDraftPrs = true;
 
 const upsertStackComment = async (
   prNumber: number,
-  commentContents: string[],
+  commentContents: string[]
 ) => {
   const { owner, repo } = await getGhConstants();
   const commentRef = "jjjj-ref";
@@ -32,7 +32,7 @@ const upsertStackComment = async (
   });
 
   const existingComment = comments.find((c) =>
-    c.body?.includes(`<div id="${commentRef}">`),
+    c.body?.includes(`<div id="${commentRef}">`)
   );
 
   const prsInStack = commentContents.filter(Boolean).length;
@@ -80,8 +80,10 @@ const upsertStackComment = async (
 const createOrUpdatePR = async (
   rev: Revision,
   prev: Revision,
-  abandonMerged: boolean,
+  abandonMerged: boolean
 ) => {
+  emitStackEvent("update", { rev, state: PRState.PENDING });
+
   const existingPr = await getPRByBranchName(rev.bookmark!);
   const { owner, repo, defaultBranch } = await getGhConstants();
 
@@ -102,6 +104,15 @@ const createOrUpdatePR = async (
   }
 
   const prExists = !!existingPr;
+
+  if (prExists && !rev.remoteOutdated) {
+    emitStackEvent("update", {
+      rev,
+      state: PRState.SKIPPED,
+      prNumber: existingPr.number,
+    });
+    return existingPr;
+  }
 
   const prParams = {
     owner,
@@ -141,7 +152,7 @@ const createOrUpdatePR = async (
 
           throw err;
         }),
-    { retries: 1 },
+    { retries: 1 }
   );
 
   emitStackEvent("update", {
@@ -155,7 +166,7 @@ const createOrUpdatePR = async (
 
 export const syncRevisions = async (
   revisions?: string,
-  abandonMerged = false,
+  abandonMerged = false
 ) => {
   const revs = await getRevisions(revisions);
 
@@ -184,11 +195,7 @@ export const syncRevisions = async (
 
   const results = await pMapSeries(revs, async (rev, i) => {
     if (!rev.bookmark) return { rev };
-    if (!rev.remoteOutdated) return { rev };
     const prevRev = revs[i - 1];
-
-    emitStackEvent("update", { rev, state: PRState.PENDING });
-
     const pr = await createOrUpdatePR(rev, prevRev, abandonMerged);
 
     return { pr, rev };
@@ -201,11 +208,13 @@ export const syncRevisions = async (
       const commentContents = results.map((current) => {
         if (!current.pr) return "";
         const isCurrent = current.pr?.number === pr?.number;
-        return `${isCurrent ? "●" : "○"} #${current.pr?.number} \`${current.pr.title}\``;
+        return `${isCurrent ? "●" : "○"} #${current.pr?.number} \`${
+          current.pr.title
+        }\``;
       });
 
       await upsertStackComment(pr.number, commentContents);
     },
-    { concurrency: 10 },
+    { concurrency: 10 }
   );
 };
