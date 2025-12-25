@@ -2,8 +2,8 @@ import OpenAI from "openai";
 import { config } from "../../../lib/config.js";
 
 const openai = new OpenAI({
-  baseURL: config.openAIBaseURL,
-  apiKey: config.openAIApiKey,
+	baseURL: config.openAIBaseURL,
+	apiKey: config.openAIApiKey,
 });
 
 const instructions = `You are a helpful describer assistant that provides accurate descriptions of changes in a diff.
@@ -22,28 +22,28 @@ Your primary function is to help users get descriptions of changes in a diff. Wh
 The user may now add some extra context, to further focus on what the result should be.`;
 
 export async function describeChanges(
-  diff: string,
-  context?: string
+	diff: string,
+	context?: string,
 ): Promise<string> {
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [
-        { role: "system", content: instructions },
-        {
-          role: "user",
-          content: context
-            ? `Here is the diff:\n\n${diff}\n\nAdditional context: ${context}`
-            : `Here is the diff:\n\n${diff}`,
-        },
-      ],
-    });
+	try {
+		const completion = await openai.chat.completions.create({
+			model: "gpt-5-mini",
+			messages: [
+				{ role: "system", content: instructions },
+				{
+					role: "user",
+					content: context
+						? `Here is the diff:\n\n${diff}\n\nAdditional context: ${context}`
+						: `Here is the diff:\n\n${diff}`,
+				},
+			],
+		});
 
-    return (
-      completion.choices[0]?.message?.content || "No description generated"
-    );
-  } catch (error) {
-    console.error("Error generating description:", error);
-    throw error;
-  }
+		return (
+			completion.choices[0]?.message?.content || "No description generated"
+		);
+	} catch (error) {
+		console.error("Error generating description:", error);
+		throw error;
+	}
 }
