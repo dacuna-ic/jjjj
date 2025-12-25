@@ -13,6 +13,7 @@
 		"build": "npx tsc --pretty",
 		"prepublishOnly": "npm run build",
 		"dev:install": "node install.js",
+		"dev:uninstall": "rm ~/.local/bin/j",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"codegen": "graphql-codegen --config .graphqlrc.ts"
 	},
