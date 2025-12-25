@@ -7,7 +7,13 @@ import React, { useEffect, useState } from "react";
 import { RevisionDisplay } from "../components/RevisionState.js";
 import { StatusState } from "../lib/gql/graphql.js";
 import { getRevisions } from "../lib/jj.js";
-import { MergeState, type RevisionToMerge, StackMerge, useMergeEvent } from "../services/merge.js";
+import {
+  MergeState,
+  type RevisionToMerge,
+  StackMerge,
+  type StackMergeOptions,
+  useMergeEvent,
+} from "../services/merge.js";
 
 const statusCharacterMap: Record<string, React.ReactNode> = {
   [MergeState.INIT]: <Text color="gray">○</Text>,
@@ -149,7 +155,7 @@ const MergeRevisionDisplay = ({ revToMerge }: { revToMerge: RevisionToMerge }) =
   );
 };
 
-const App = ({ revisions }: { revisions: string }) => {
+const App = ({ revisions, options }: { revisions: string; options: StackMergeOptions }) => {
   const [revisionsToMerge, setRevisionsToMerge] = useState<RevisionToMerge[]>([]);
   const [outdatedRevisions, setOutdatedRevisions] = useState<RevisionToMerge[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -158,7 +164,7 @@ const App = ({ revisions }: { revisions: string }) => {
   useEffect(() => {
     const initMerge = async () => {
       const revs = await getRevisions(revisions);
-      const stackMerge = new StackMerge(revs);
+      const stackMerge = new StackMerge(revs, options);
       setMerge(stackMerge);
 
       stackMerge.execute().catch((err) => {
@@ -168,7 +174,7 @@ const App = ({ revisions }: { revisions: string }) => {
     };
 
     initMerge();
-  }, [revisions]);
+  }, [revisions, options]);
 
   useMergeEvent("init", (revs) => {
     setRevisionsToMerge([...revs].reverse());
@@ -252,12 +258,20 @@ export default class Merge extends Command {
       description: "revision set to merge",
       default: "fork_point(trunk()..@)::@",
     }),
+    "auto-ready": Flags.boolean({
+      description: "automatically mark PRs as ready for review before merging",
+      default: false,
+    }),
   };
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(Merge);
 
-    const r = render(<App revisions={flags.revisions} />);
+    const options: StackMergeOptions = {
+      autoReady: flags["auto-ready"],
+    };
+
+    const r = render(<App revisions={flags.revisions} options={options} />);
 
     process.on("SIGINT", () => {
       r.unmount();

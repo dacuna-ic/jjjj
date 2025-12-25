@@ -1,19 +1,7 @@
 import { Command, Flags } from "@oclif/core";
 import pMap from "p-map";
-import { gh } from "../lib/github-gql.js";
-import { getPRByBranchName } from "../lib/github.js";
-import { graphql } from "../lib/gql/gql.js";
+import { getPRByBranchName, markPrReady } from "../lib/github.js";
 import { getRevisions } from "../lib/jj.js";
-
-const setPrReady = graphql(/* GraphQL */ `
-  mutation setPrReady($prId: ID!) {
-    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {
-      pullRequest {
-        number
-      }
-    }
-  }
-`);
 
 export default class Ready extends Command {
   static override description = "Mark pull requests as ready for review";
@@ -49,9 +37,7 @@ export default class Ready extends Command {
           throw new Error(`PR not found for rev: ${rev.changeId}`);
         }
 
-        return gh.mutation(setPrReady, {
-          prId: pr.node_id,
-        });
+        return markPrReady(pr.node_id);
       },
       { concurrency: 10 },
     );

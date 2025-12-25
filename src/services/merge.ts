@@ -2,7 +2,7 @@ import pMap from "p-map";
 import pWaitFor from "p-wait-for";
 import { $, chalk } from "zx";
 import { gh } from "../lib/github-gql.js";
-import { getGhConstants, getPRByBranchName, octokit } from "../lib/github.js";
+import { getGhConstants, getPRByBranchName, markPrReady, octokit } from "../lib/github.js";
 import {
   type GetPrMergeDataQuery,
   MergeableState,
@@ -271,15 +271,21 @@ export class RevisionToMerge {
   }
 }
 
+export type StackMergeOptions = {
+  autoReady?: boolean;
+};
+
 export class StackMerge {
   revs: Revision[] = [];
   mergeRevisions: RevisionToMerge[] = [];
   hasOutdatedRevisions = false;
   confirmOutdatedRevisions = false;
+  options: StackMergeOptions;
 
-  constructor(revs: Revision[]) {
+  constructor(revs: Revision[], options: StackMergeOptions = {}) {
     this.revs = revs;
-    log.info(`Created StackMerge with ${revs.length} revisions`);
+    this.options = options;
+    log.info(`Created StackMerge with ${revs.length} revisions`, { options });
   }
 
   async buildMergeRevisions() {
@@ -341,6 +347,13 @@ export class StackMerge {
 
       log.debug(`Updating revision: ${mergeRev.rev.changeId}`);
       await mergeRev.update();
+
+      // Mark PR as ready if auto-ready is enabled
+      if (this.options.autoReady) {
+        log.info(`Marking PR #${mergeRev.pr.number} as ready for review`);
+        await markPrReady(mergeRev.pr.node_id);
+      }
+
       log.info(`Merging revision: ${mergeRev.rev.changeId}`);
       await mergeRev.merge();
       log.debug("Running restack command");
