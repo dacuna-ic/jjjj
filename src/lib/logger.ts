@@ -17,18 +17,18 @@ const logFilePath = path.join(logsDir, "logs.log");
 
 // Create logger instance
 export const logger = pino(
-	{
-		level: process.env.LOG_LEVEL || "debug",
-	},
-	pino.destination({ dest: logFilePath }),
+  {
+    level: process.env.LOG_LEVEL || "debug",
+  },
+  pino.destination({ dest: logFilePath }),
 );
 
 // Create a namespaced logger
 export const createLogger = (namespace: string) => {
-	return logger.child({ namespace });
+  return logger.child({ namespace });
 };
 
 // Ensure logs are flushed on exit
 process.on("exit", () => {
-	logger.flush();
+  logger.flush();
 });

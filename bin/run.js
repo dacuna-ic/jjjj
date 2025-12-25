@@ -5,9 +5,9 @@ import path from "node:path";
 import { globby } from "zx";
 
 let args;
-const commands = await globby(
-  path.join(import.meta.dirname, "../dist/commands/*"),
-).then((results) => results.map((s) => path.basename(s, ".js")));
+const commands = await globby(path.join(import.meta.dirname, "../dist/commands/*")).then(
+  (results) => results.map((s) => path.basename(s, ".js")),
+);
 
 commands.push("--help");
 

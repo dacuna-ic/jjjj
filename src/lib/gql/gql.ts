@@ -14,14 +14,14 @@ import * as types from "./graphql.js";
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
-	"\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n": typeof types.SetPrReadyDocument;
-	"\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n": typeof types.GetPrMergeDataDocument;
+  "\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n": typeof types.SetPrReadyDocument;
+  "\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n": typeof types.GetPrMergeDataDocument;
 };
 const documents: Documents = {
-	"\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n":
-		types.SetPrReadyDocument,
-	"\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n":
-		types.GetPrMergeDataDocument,
+  "\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n":
+    types.SetPrReadyDocument,
+  "\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n":
+    types.GetPrMergeDataDocument,
 };
 
 /**
@@ -42,18 +42,18 @@ export function graphql(source: string): unknown;
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(
-	source: "\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n",
+  source: "\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n",
 ): (typeof documents)["\n  mutation setPrReady($prId: ID!) {\n    markPullRequestReadyForReview(input: { pullRequestId: $prId }) {\n      pullRequest {\n        number\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(
-	source: "\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n",
+  source: "\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n",
 ): (typeof documents)["\n  query getPrMergeData($owner: String!, $repo: String!, $prNumber: Int!) {\n    repository(owner: $owner, name: $repo) {\n      pullRequest(number: $prNumber) {\n        reviewDecision\n        mergeable\n        canBeRebased\n        statusCheckRollup {\n          state\n        }\n      }\n    }\n  }\n"];
 
 export function graphql(source: string) {
-	return (documents as any)[source] ?? {};
+  return (documents as any)[source] ?? {};
 }
 
 export type DocumentType<TDocumentNode extends DocumentNode<any, any>> =
-	TDocumentNode extends DocumentNode<infer TType, any> ? TType : never;
+  TDocumentNode extends DocumentNode<infer TType, any> ? TType : never;
