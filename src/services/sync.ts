@@ -141,9 +141,15 @@ export const syncRevisions = async (
   emitStackEvent("init", revs);
 
   await pMapSeries(revs, async (rev, i) => {
+    const isNewBookmark = !rev.bookmark;
     rev.bookmark = await getBranchName(rev);
 
     if (!rev.bookmark) {
+      emitStackEvent("update", { rev, state: PRState.SKIPPED });
+      return rev;
+    }
+
+    if (!isNewBookmark && !rev.remoteOutdated) {
       emitStackEvent("update", { rev, state: PRState.SKIPPED });
       return rev;
     }
