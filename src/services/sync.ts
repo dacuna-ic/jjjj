@@ -35,25 +35,46 @@ const upsertStackComment = async (
     c.body?.includes(`<div id="${commentRef}">`),
   );
 
-  const commentArgs = {
+  const prsInStack = commentContents.filter(Boolean).length;
+
+  // Single PR stack: delete existing comment if any, don't create new one
+  if (prsInStack <= 1) {
+    if (existingComment) {
+      await octokit.rest.issues.deleteComment({
+        owner,
+        repo,
+        comment_id: existingComment.id,
+      });
+    }
+    return;
+  }
+
+  const newBody = [
+    `<div id="${commentRef}">\n`,
+    "#### Note: this is a stack of PRs, check the following for more details:",
+    [...commentContents].reverse().join("\n"),
+    "\n</div>",
+  ].join("\n");
+
+  if (existingComment) {
+    // If the comment is the same, don't update it
+    if (existingComment.body === newBody) return;
+
+    return octokit.rest.issues.updateComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      comment_id: existingComment.id,
+      body: newBody,
+    });
+  }
+
+  return octokit.rest.issues.createComment({
     owner,
     repo,
     issue_number: prNumber,
-    body: [
-      `<div id="${commentRef}">\n`,
-      "#### Note: this is a stack of PRs, check the following for more details:",
-      commentContents.reverse().join("\n"),
-      "\n</div>",
-    ].join("\n"),
-  };
-
-  if (existingComment)
-    return octokit.rest.issues.updateComment({
-      ...commentArgs,
-      comment_id: existingComment.id,
-    });
-
-  return octokit.rest.issues.createComment(commentArgs);
+    body: newBody,
+  });
 };
 
 const createOrUpdatePR = async (
