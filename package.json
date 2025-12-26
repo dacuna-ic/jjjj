@@ -1,6 +1,6 @@
 {
   "name": "jjjj-cli",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "A Stacked PR tool sitting atop Jujutsu VCS with GitHub integration",
   "keywords": [
     "git",
