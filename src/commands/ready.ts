@@ -43,7 +43,9 @@ export default class Ready extends Command {
     );
 
     this.log(
-      `Set PRs ${results.map((r) => r?.data?.markPullRequestReadyForReview?.pullRequest?.number)} to ready`,
+      `Set PRs ${results
+        .filter(Boolean)
+        .map((r) => r?.data?.markPullRequestReadyForReview?.pullRequest?.number)} to ready`,
     );
   }
 }
