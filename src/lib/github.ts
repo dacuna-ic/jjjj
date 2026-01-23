@@ -33,23 +33,44 @@ export type GithubConstants = {
   defaultBranch: string;
 };
 
+const parseGitRemoteUrl = (url: string): { owner: string; repo: string } => {
+  // Handle SSH format: git@github.com:owner/repo.git
+  const sshMatch = url.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
+  if (sshMatch) {
+    return { owner: sshMatch[1], repo: sshMatch[2] };
+  }
+
+  // Handle HTTPS format: https://github.com/owner/repo.git
+  const httpsMatch = url.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/);
+  if (httpsMatch) {
+    return { owner: httpsMatch[1], repo: httpsMatch[2] };
+  }
+
+  throw new Error(`Could not parse GitHub remote URL: ${url}`);
+};
+
 export const getGhConstants = async (): Promise<GithubConstants> => {
   return withCache("gh-data", async () => {
+    // Get remote URL from jj (works in workspaces)
+    const remoteOutput = (await $`jj git remote list`.quiet()).stdout.trim();
+    const originLine = remoteOutput.split("\n").find((line) => line.startsWith("origin "));
+    if (!originLine) {
+      throw new Error("Could not find origin remote");
+    }
+    const remoteUrl = originLine.replace(/^origin\s+/, "");
+    const { owner, repo } = parseGitRemoteUrl(remoteUrl);
+
     const [repoData, currentUser] = await Promise.all([
-      $`gh repo view --json owner,name,defaultBranchRef`.json() as Promise<{
-        owner: { login: string };
-        name: string;
-        defaultBranchRef: { name: string };
-      }>,
+      octokit.rest.repos.get({ owner, repo }),
       octokit.rest.users.getAuthenticated().then((r) => r.data.login),
     ]);
 
     return {
-      owner: repoData.owner.login,
-      repo: repoData.name,
+      owner,
+      repo,
       currentUser,
       prefix: `${currentUser}/`,
-      defaultBranch: repoData.defaultBranchRef.name,
+      defaultBranch: repoData.data.default_branch,
     };
   });
 };
