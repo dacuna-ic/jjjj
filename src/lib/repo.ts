@@ -1,18 +1,10 @@
-import path from "node:path";
-import { findUp, pathExists } from "find-up";
+import { $ } from "zx";
 
 export const getRepoRoot = async (): Promise<string> => {
-  const repoRoot = await findUp(
-    async (dir) => {
-      const exists = await pathExists(path.join(dir, ".git/refs/jj"));
-      return exists ? dir : undefined;
-    },
-    { type: "directory" },
-  );
-
-  if (!repoRoot) {
+  try {
+    const result = await $`jj workspace root`.quiet();
+    return result.stdout.trim();
+  } catch {
     throw new Error("Could not find jj in this repository, has it been initialized?");
   }
-
-  return repoRoot;
 };
