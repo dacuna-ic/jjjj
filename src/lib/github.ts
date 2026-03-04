@@ -96,7 +96,18 @@ export const getBranchName = async (rev: Revision) => {
     return undefined;
   }
 
-  const desc = _.kebabCase(rev.description.split(":").at(1)?.trim() ?? rev.description);
+  // Skip revisions starting with "wip" (treated as checkpoints)
+  if (rev.description.toLowerCase().startsWith("wip")) {
+    return undefined;
+  }
+
+  const parts = rev.description.split(":");
+  // Skip revisions without conventional commit format (treated as checkpoints)
+  if (parts.length < 2 || !parts[1]?.trim()) {
+    return undefined;
+  }
+
+  const desc = _.kebabCase(parts[1].trim());
 
   return `${prefix}${rev.changeId.slice(0, 5)}/${desc}`;
 };
