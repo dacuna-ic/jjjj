@@ -47,7 +47,7 @@ export default class Restack extends Command {
       concurrency: 1,
     });
 
-    const revisions = ["-r", flags.all ? "mutable()" : "@"];
+    const revisions = ["-r", flags.all ? "mutable()" : "fork_point(trunk()..@)::@"];
 
     // Note we don't use the `log` util since it uses --no-graph which breaks its expectations, as we basically want multiple ranges instead of just one
     const allBranchRootsOutput = await $`jj log --quiet ${revisions} --template="change_id"`.text();
