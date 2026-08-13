@@ -1,196 +1,191 @@
 import "zx/globals";
-import _ from "lodash";
-import pMap from "p-map";
 import pMapSeries from "p-map-series";
-import pRetry from "p-retry";
 import { $ } from "zx";
-import { getBranchName, getGhConstants, getPRByBranchName, octokit } from "../lib/github.js";
-import { abandon, getRevisions, log } from "../lib/jj.js";
-import type { Revision } from "../lib/types.js";
+import {
+  getBranchName,
+  getGhConstants,
+  getNativeStackByPRNumber,
+  getPRByBranchName,
+  octokit,
+} from "../lib/github.js";
+import type { NativeStack } from "../lib/github.js";
+import { abandon, getGitRoot, getRevisions } from "../lib/jj.js";
+import { createLogger } from "../lib/logger.js";
+import type { PullRequest, Revision } from "../lib/types.js";
 import { PRState, emitStackEvent } from "../lib/useStackEvents.js";
 
 $.quiet = true;
-let supportsDraftPrs = true;
+const log = createLogger("sync");
+const removeClosedRevision = async (
+  rev: Revision,
+  existingPr: PullRequest | undefined,
+  abandonMerged: boolean,
+) => {
+  if (existingPr?.state !== "closed") return existingPr ?? null;
 
-const upsertStackComment = async (prNumber: number, commentContents: string[]) => {
-  const { owner, repo } = await getGhConstants();
-  const commentRef = "jjjj-ref";
-  const { data: comments } = await octokit.rest.issues.listComments({
-    owner,
-    repo,
-    issue_number: prNumber,
-    direction: "asc",
-    per_page: 100,
-  });
-
-  const existingComment = comments.find((c) => c.body?.includes(`<div id="${commentRef}">`));
-
-  const prsInStack = commentContents.filter(Boolean).length;
-
-  // Single PR stack: delete existing comment if any, don't create new one
-  if (prsInStack <= 1) {
-    if (existingComment) {
-      await octokit.rest.issues.deleteComment({
-        owner,
-        repo,
-        comment_id: existingComment.id,
-      });
-    }
-    return;
-  }
-
-  const newBody = [
-    `<div id="${commentRef}">\n`,
-    "#### Note: this is a stack of PRs, check the following for more details:",
-    [...commentContents].reverse().join("\n"),
-    "\n</div>",
-  ].join("\n");
-
-  if (existingComment) {
-    // If the comment is the same, don't update it
-    if (existingComment.body === newBody) return;
-
-    return octokit.rest.issues.updateComment({
-      owner,
-      repo,
-      issue_number: prNumber,
-      comment_id: existingComment.id,
-      body: newBody,
-    });
-  }
-
-  return octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: prNumber,
-    body: newBody,
-  });
-};
-
-const createOrUpdatePR = async (rev: Revision, prev: Revision, abandonMerged: boolean) => {
-  const existingPr = await getPRByBranchName(rev.bookmark!);
-  const { owner, repo, defaultBranch } = await getGhConstants();
-
-  if (existingPr?.state === "closed") {
+  if (!existingPr.merged_at) {
+    const { owner, repo } = await getGhConstants();
     await octokit.rest.git
       .deleteRef({
         owner,
         repo,
         ref: `heads/${rev.bookmark}`,
       })
-      .catch((e) => {
-        console.log(`Could not delete ${rev.bookmark}: ${e.message}`);
+      .catch((error) => {
+        log.warn({ error, bookmark: rev.bookmark }, "Could not delete remote bookmark");
       });
-    await abandon(rev.changeId, !abandonMerged);
-    emitStackEvent("update", { rev, state: PRState.DELETED });
-
-    return undefined;
   }
+  await abandon(rev.changeId, !abandonMerged);
+  emitStackEvent("update", { rev, state: PRState.DELETED });
 
-  const prExists = !!existingPr;
+  return undefined;
+};
 
-  if (prExists && !rev.remoteOutdated) {
+const syncSingleRevision = async (rev: Revision) => {
+  const existingPr = await getPRByBranchName(rev.bookmark!);
+  const { owner, repo, defaultBranch } = await getGhConstants();
+  emitStackEvent("update", { rev, state: PRState.SYNCING, prNumber: existingPr?.number });
+  await $`jj git push -b ${rev.bookmark}`;
+
+  if (existingPr) {
+    if (existingPr.title !== rev.description) {
+      await octokit.rest.pulls.update({
+        owner,
+        repo,
+        pull_number: existingPr.number,
+        title: rev.description,
+      });
+    }
     emitStackEvent("update", {
       rev,
-      state: PRState.SKIPPED,
+      state: rev.remoteOutdated ? PRState.UPDATED : PRState.SKIPPED,
       prNumber: existingPr.number,
     });
-    return existingPr;
+    return;
   }
 
-  emitStackEvent("update", { rev, state: PRState.PENDING });
-
-  const prParams = {
+  const pr = await octokit.rest.pulls.create({
     owner,
     repo,
     title: rev.description,
     body: "",
     head: rev.bookmark!,
-    base: prev?.bookmark || defaultBranch,
-  };
+    base: defaultBranch,
+    draft: true,
+  });
+  emitStackEvent("update", { rev, state: PRState.CREATED, prNumber: pr.data.number });
+};
 
-  if (prExists) {
-    const pr = await octokit.rest.pulls.update({
-      ...prParams,
-      body: undefined,
-      pull_number: existingPr.number,
+const linkStack = async (revs: Revision[], abandonMerged: boolean) => {
+  const existingPrBookmarks = new Set<string>();
+  const pullRequestsByBookmark = new Map<string, PullRequest>();
+  const activeRevs: Revision[] = [];
+  let nativeStack: NativeStack | undefined;
+  let mergedRevisionFound = false;
+
+  for (const rev of revs) {
+    const existingPr = await getPRByBranchName(rev.bookmark!);
+    if (!existingPr) continue;
+    pullRequestsByBookmark.set(rev.bookmark!, existingPr);
+
+    const candidate = await getNativeStackByPRNumber(existingPr.number);
+    if (!candidate?.open) continue;
+    if (nativeStack && candidate.number !== nativeStack.number) {
+      throw new Error(
+        `PR #${existingPr.number} belongs to GitHub stack #${candidate.number}, not #${nativeStack.number}`,
+      );
+    }
+    nativeStack = candidate;
+  }
+
+  await $`jj git fetch`;
+
+  for (const rev of revs) {
+    const existingPr = pullRequestsByBookmark.get(rev.bookmark!);
+    if (existingPr?.merged_at) mergedRevisionFound = true;
+    const remainingPr = await removeClosedRevision(rev, existingPr, abandonMerged);
+    if (remainingPr === undefined) continue;
+    if (remainingPr !== null) existingPrBookmarks.add(rev.bookmark!);
+    activeRevs.push(rev);
+    emitStackEvent("update", {
+      rev,
+      state: PRState.SYNCING,
+      prNumber: remainingPr?.number,
     });
+  }
+
+  if (activeRevs.length === 0) return;
+  if (activeRevs.length === 1 && !nativeStack) {
+    await syncSingleRevision(activeRevs[0]);
+    return;
+  }
+
+  if (mergedRevisionFound) {
+    await $`jj rebase -s ${activeRevs[0].changeId} -d "trunk()"`;
+  }
+
+  await pMapSeries(activeRevs, async (rev) => {
+    await $`jj git push -b ${rev.bookmark}`;
+  });
+
+  const { defaultBranch, owner, repo } = await getGhConstants();
+  const nativeBranches = new Set(
+    nativeStack?.pull_requests.map((pullRequest) => pullRequest.head.ref) ?? [],
+  );
+  const stackBase = nativeStack?.base.ref ?? defaultBranch;
+  const newBranches = activeRevs
+    .filter((rev) => !nativeBranches.has(rev.bookmark!))
+    .map((rev) => rev.bookmark!);
+  const linkArgs = nativeStack
+    ? [String(nativeStack.number), ...newBranches]
+    : activeRevs.map((rev) => rev.bookmark!);
+  if (!nativeStack || newBranches.length > 0) {
+    const gitRoot = await getGitRoot();
+    await $({ cwd: gitRoot })`gh stack link --base ${stackBase} ${linkArgs}`;
+  }
+  await $`jj git fetch`;
+
+  await pMapSeries(activeRevs, async (rev) => {
+    await $`jj bookmark track ${rev.bookmark}@origin`;
+    const pr = await getPRByBranchName(rev.bookmark!);
+    if (!pr) throw new Error(`gh stack link did not create a pull request for ${rev.bookmark}`);
+
+    if (pr.title !== rev.description) {
+      await octokit.rest.pulls.update({
+        owner,
+        repo,
+        pull_number: pr.number,
+        title: rev.description,
+      });
+    }
 
     emitStackEvent("update", {
       rev,
-      state: PRState.UPDATED,
-      prNumber: pr.data.number,
+      state: existingPrBookmarks.has(rev.bookmark!)
+        ? rev.remoteOutdated
+          ? PRState.UPDATED
+          : PRState.SKIPPED
+        : PRState.CREATED,
+      prNumber: pr.number,
     });
-
-    return pr.data;
-  }
-  const pr = await pRetry(
-    () =>
-      octokit.rest.pulls.create({ ...prParams, draft: supportsDraftPrs }).catch((err) => {
-        if (err.status === 422 && err.message.includes("Draft pull requests are not supported")) {
-          supportsDraftPrs = false;
-        }
-
-        throw err;
-      }),
-    { retries: 1 },
-  );
-
-  emitStackEvent("update", {
-    rev,
-    state: PRState.CREATED,
-    prNumber: pr.data.number,
   });
-
-  return pr.data;
 };
 
 export const syncRevisions = async (revisions?: string, abandonMerged = false) => {
   const revs = await getRevisions(revisions);
-
   emitStackEvent("init", revs);
 
-  await pMapSeries(revs, async (rev, i) => {
-    const isNewBookmark = !rev.bookmark;
+  const stackRevs: Revision[] = [];
+  await pMapSeries(revs, async (rev) => {
     rev.bookmark = await getBranchName(rev);
-
     if (!rev.bookmark) {
       emitStackEvent("update", { rev, state: PRState.SKIPPED });
-      return rev;
+      return;
     }
-
-    if (!isNewBookmark && !rev.remoteOutdated) {
-      emitStackEvent("update", { rev, state: PRState.SKIPPED });
-      return rev;
-    }
-
-    emitStackEvent("update", { rev, state: PRState.SYNCING });
 
     await $`jj bookmark set -r ${rev.changeId} ${rev.bookmark} --allow-backwards`;
-    await $`jj bookmark track ${rev.bookmark}@origin`;
-    await $`jj git push -b ${rev.bookmark}`;
+    stackRevs.push(rev);
   });
 
-  const results = await pMapSeries(revs, async (rev, i) => {
-    if (!rev.bookmark) return { rev };
-    const prevRev = revs[i - 1];
-    const pr = await createOrUpdatePR(rev, prevRev, abandonMerged);
-
-    return { pr, rev };
-  });
-
-  await pMap(
-    results,
-    async ({ pr, rev }) => {
-      if (!pr) return;
-      const commentContents = results.map((current) => {
-        if (!current.pr) return "";
-        const isCurrent = current.pr?.number === pr?.number;
-        return `${isCurrent ? "●" : "○"} #${current.pr?.number} \`${current.pr.title}\``;
-      });
-
-      await upsertStackComment(pr.number, commentContents);
-    },
-    { concurrency: 10 },
-  );
+  await linkStack(stackRevs, abandonMerged);
 };

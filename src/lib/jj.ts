@@ -6,6 +6,10 @@ export const fetch = async () => {
   await $`jj git fetch`;
 };
 
+export const getGitRoot = async () => {
+  return $`jj git root`.text().then((root) => root.trim());
+};
+
 export const abandon = async (rev?: string, withConfirmation = true) => {
   if (!rev) return false;
 
