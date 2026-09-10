@@ -56,6 +56,7 @@ https://github.com/user-attachments/assets/8cbb6736-c486-4181-9deb-27069db5c7e3
 #### `sync`
 
 Creates bookmarks if needed, fetches remote changes, re-pushes active layers with `jj git push`, then delegates PR creation and linking to `gh stack link`. For an existing native stack, `j sync` reads GitHub's stack metadata, retains merged PRs in the stack, rebases the remaining JJ revisions onto trunk, and appends new layers without directly changing PR bases. New PRs are drafts. Bookmark names use `{yourUsername}/{revId}/your-revision-descriptions-first-line` and strip [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) prefixes (e.g. `feat: some fancy feature` becomes `some-fancy-feature`).
+During sync, `j` renders each revision with its change ID, bookmark, commit subject, sync status, and associated PR number and URL. Native `gh stack` command output stays out of the rendered status view.
 
 #### `restack`
 
