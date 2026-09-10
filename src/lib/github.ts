@@ -113,6 +113,26 @@ export const getPRByBranchName = async (branchName: string) => {
   return prs.at(0);
 };
 
+export const hasRemoteBranch = async (branchName: string) => {
+  const { owner, repo } = await getGhConstants();
+
+  try {
+    await octokit.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+    });
+    return true;
+  } catch (error) {
+    const status =
+      error && typeof error === "object" && "status" in error && typeof error.status === "number"
+        ? error.status
+        : undefined;
+    if (status === 404) return false;
+    throw error;
+  }
+};
+
 export const getNativeStackByPRNumber = async (
   prNumber: number,
 ): Promise<NativeStack | undefined> => {
