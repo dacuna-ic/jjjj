@@ -7,25 +7,69 @@ import type { Revision } from "../lib/types.js";
 import { PRState, useStackEvent } from "../lib/useStackEvents.js";
 import { syncRevisions } from "../services/sync.js";
 
-type RevisionWithState = { rev: Revision; state: PRState; prNumber?: number };
+type SyncRevisionState = {
+  state: PRState;
+  prNumber?: number;
+};
 
 const getLabel = (state: PRState) => {
   if (state === PRState.PENDING) return "Pending";
   if (state === PRState.CREATED) return "Created";
   if (state === PRState.SKIPPED) return "Skipped";
-  if (state === PRState.DELETED) return "Deleted";
   if (state === PRState.UPDATED) return "Updated";
+  if (state === PRState.DELETED) return "Deleted";
   if (state === PRState.SYNCING) return "Syncing";
   return "Unknown";
 };
 
 const getColor = (state: PRState) => {
-  if (state === PRState.PENDING) return "gray";
-  if (state === PRState.CREATED) return "green";
-  if (state === PRState.UPDATED) return "green";
-  if (state === PRState.SKIPPED) return "yellow";
+  if (state === PRState.PENDING || state === PRState.SYNCING) return "gray";
+  if (state === PRState.CREATED || state === PRState.UPDATED) return "green";
   if (state === PRState.DELETED) return "red";
-  return "gray";
+  return "yellow";
+};
+
+const SyncRevisionDisplay = ({
+  rev,
+  owner,
+  repo,
+}: {
+  rev: Revision;
+  owner: string;
+  repo: string;
+}) => {
+  const [status, setStatus] = useState<SyncRevisionState>({ state: PRState.PENDING });
+
+  useStackEvent("update", (event) => {
+    if (event.rev.changeId !== rev.changeId) return;
+
+    setStatus({ state: event.state, prNumber: event.prNumber });
+  });
+
+  const { state, prNumber } = status;
+
+  return (
+    <RevisionDisplay
+      rev={rev}
+      label={getLabel(state)}
+      color={getColor(state)}
+      statusCharacter={state === PRState.PENDING || state === PRState.SYNCING ? "○" : "●"}
+      description={
+        <Text>
+          <Text>{rev.description}</Text>
+          {prNumber && (
+            <Text>
+              <Text> · </Text>
+              <Text color="yellow">#{prNumber} </Text>
+              <Text>
+                https://github.com/{owner}/{repo}/pull/{prNumber}
+              </Text>
+            </Text>
+          )}
+        </Text>
+      }
+    />
+  );
 };
 
 const App = ({
@@ -39,43 +83,20 @@ const App = ({
   revisions?: string;
   abandonMerged: boolean;
 }) => {
-  const [state, setState] = useState<RevisionWithState[]>([]);
+  const [revisionsToSync, setRevisionsToSync] = useState<Revision[]>([]);
+
   useEffect(() => {
-    syncRevisions(revisions, abandonMerged);
+    void syncRevisions(revisions, abandonMerged);
   }, [revisions, abandonMerged]);
 
   useStackEvent("init", (revs) => {
-    setState([...revs].reverse().map((rev) => ({ rev, state: PRState.PENDING })));
+    setRevisionsToSync([...revs].reverse());
   });
-
-  useStackEvent("update", (event: RevisionWithState) => {
-    setState((prevState) =>
-      prevState.map((item) => (item.rev.changeId === event.rev.changeId ? event : item)),
-    );
-  });
-
-  const getPrURL = (prNumber: number) => `https://github.com/${owner}/${repo}/pull/${prNumber}`;
 
   return (
     <Box flexDirection="column">
-      {state.map((item) => (
-        <RevisionDisplay
-          key={item.rev.changeId}
-          rev={item.rev}
-          label={getLabel(item.state)}
-          color={getColor(item.state)}
-          statusCharacter={
-            item.state === PRState.PENDING || item.state === PRState.SYNCING ? "○" : "●"
-          }
-          description={
-            item.prNumber && (
-              <Text>
-                <Text color="yellow">#{item.prNumber} </Text>
-                <Text>{getPrURL(item.prNumber)}</Text>
-              </Text>
-            )
-          }
-        />
+      {revisionsToSync.map((rev) => (
+        <SyncRevisionDisplay key={rev.changeId} rev={rev} owner={owner} repo={repo} />
       ))}
       <Text>~</Text>
     </Box>
