@@ -33,6 +33,31 @@ export type GithubConstants = {
   defaultBranch: string;
 };
 
+export type NativeStackPullRequest = {
+  number: number;
+  state: "open" | "closed";
+  draft: boolean;
+  merged_at: string | null;
+  head: {
+    ref: string;
+    sha: string;
+  };
+};
+
+export type NativeStack = {
+  id: number;
+  number: number;
+  node_id: string;
+  url: string;
+  base: {
+    ref: string;
+    sha?: string;
+  };
+  open: boolean;
+  created_at: string;
+  pull_requests: NativeStackPullRequest[];
+};
+
 const parseGitRemoteUrl = (url: string): { owner: string; repo: string } => {
   // Handle SSH format: git@github.com:owner/repo.git
   const sshMatch = url.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
@@ -86,6 +111,19 @@ export const getPRByBranchName = async (branchName: string) => {
   });
 
   return prs.at(0);
+};
+
+export const getNativeStackByPRNumber = async (
+  prNumber: number,
+): Promise<NativeStack | undefined> => {
+  const { owner, repo } = await getGhConstants();
+  const response = await octokit.request("GET /repos/{owner}/{repo}/stacks", {
+    owner,
+    repo,
+    pull_request: prNumber,
+  });
+
+  return (response.data as NativeStack[]).at(0);
 };
 
 export const getBranchName = async (rev: Revision) => {

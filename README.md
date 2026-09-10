@@ -7,7 +7,7 @@ A Stacked PR tool sitting atop [Jujutsu VCS](https://github.com/jj-vcs/jj).
 ### Requirements
 
 - [jj](https://www.jj-vcs.dev/latest/install-and-setup/)!
-- The [`gh` utility from GitHub](https://cli.github.com)
+- The [`gh` utility from GitHub](https://cli.github.com) with the [`github/gh-stack`](https://github.com/github/gh-stack) extension
 - Node.js 18 or higher
 
 ### Installation
@@ -39,7 +39,7 @@ $ touch foo
 $ j new -m bar
 $ touch bar
 
-# Creates bookmarks and pushes to Github
+# Creates bookmarks, pushes them, creates draft PRs, and links them as a native GitHub stack
 $ j sync
 # Mark all PRs up until to the current point as ready
 $ j ready
@@ -55,7 +55,7 @@ https://github.com/user-attachments/assets/8cbb6736-c486-4181-9deb-27069db5c7e3
 
 #### `sync`
 
-Creates bookmarks (if needed) and pushes to Github. It will use `{yourUsername}/{revId}/your-revision-descriptions-first-line`. It will additionally strip any [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) prefixes (e.g.: 'feat: some fancy feature' -> 'some-fancy-feature')
+Creates bookmarks if needed, fetches remote changes, re-pushes active layers with `jj git push`, then delegates PR creation and linking to `gh stack link`. For an existing native stack, `j sync` reads GitHub's stack metadata, retains merged PRs in the stack, rebases the remaining JJ revisions onto trunk, and appends new layers without directly changing PR bases. New PRs are drafts. Bookmark names use `{yourUsername}/{revId}/your-revision-descriptions-first-line` and strip [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) prefixes (e.g. `feat: some fancy feature` becomes `some-fancy-feature`).
 
 #### `restack`
 
