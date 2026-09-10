@@ -65,6 +65,10 @@ Does a `jj git fetch`, followed by rebases for the whole current stack. You can 
 
 `jj log` equivalent but only displays the current stack.
 
+#### `stack destroy`
+
+Closes all associated open PRs, deletes their remote bookmarks, and forgets local bookmark state while retaining the JJ revisions. Run `j sync` afterward to create fresh PRs. The command prompts for confirmation; pass `--yes` to skip it.
+
 #### `ready`
 
 Marks all PR up to the current point as ready

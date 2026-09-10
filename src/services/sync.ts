@@ -6,6 +6,7 @@ import {
   getGhConstants,
   getNativeStackByPRNumber,
   getPRByBranchName,
+  hasRemoteBranch,
   octokit,
 } from "../lib/github.js";
 import type { NativeStack } from "../lib/github.js";
@@ -25,6 +26,7 @@ const removeClosedRevision = async (
 
   if (!existingPr.merged_at) {
     const { owner, repo } = await getGhConstants();
+    if (!(await hasRemoteBranch(rev.bookmark!))) return null;
     await octokit.rest.git
       .deleteRef({
         owner,
