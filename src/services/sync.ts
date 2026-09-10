@@ -145,6 +145,7 @@ const linkStack = async (revs: Revision[], abandonMerged: boolean) => {
   }
   await $`jj git fetch`;
 
+  const pullRequestsByActiveBookmark = new Map<string, PullRequest>();
   await pMapSeries(activeRevs, async (rev) => {
     await $`jj bookmark track ${rev.bookmark}@origin`;
     const pr = await getPRByBranchName(rev.bookmark!);
@@ -159,6 +160,24 @@ const linkStack = async (revs: Revision[], abandonMerged: boolean) => {
       });
     }
 
+    pullRequestsByActiveBookmark.set(rev.bookmark!, pr);
+  });
+
+  // Branch arguments create missing PRs. Re-link with the complete ordered PR
+  // list so the native stack update is deterministic and preserves old layers.
+  if (!nativeStack || newBranches.length > 0) {
+    const resolvedLinkArgs = nativeStack
+      ? [
+          ...nativeStack.pull_requests.map((pullRequest) => String(pullRequest.number)),
+          ...newBranches.map((branch) => String(pullRequestsByActiveBookmark.get(branch)!.number)),
+        ]
+      : activeRevs.map((rev) => String(pullRequestsByActiveBookmark.get(rev.bookmark!)!.number));
+    const gitRoot = await getGitRoot();
+    await $({ cwd: gitRoot })`gh stack link --base ${stackBase} ${resolvedLinkArgs}`;
+  }
+
+  await pMapSeries(activeRevs, async (rev) => {
+    const pr = pullRequestsByActiveBookmark.get(rev.bookmark!)!;
     emitStackEvent("update", {
       rev,
       state: existingPrBookmarks.has(rev.bookmark!)
